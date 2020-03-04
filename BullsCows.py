@@ -15,41 +15,67 @@ class BullsCows:
     UserGuess and CompGuess
     """
 
+
     @staticmethod
     def pick():
-        numeric = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        """
+        function picks up a random 4-digit string to guess by user
+        :return puzzle: 4-digit string to guess by user
+        """
+        numeric = '0123456789'
 
         puzzle = ''
 
         while len(puzzle) != 4:
-            var = int(random.random()*10)
-            if var in numeric:
-                puzzle += str(var)
-                numeric.remove(var)
+            var = numeric[int(random.random()*len(numeric))]
+            puzzle += var
+            numeric = numeric.replace(var, '')
 
         return puzzle
 
     @staticmethod
-    def compare(riddle, attempt):
+    def compare(puzzle, attempt):
+        """
+        function compares two 4-digit strings namely puzzle (or number to guess by user) and attempt (input by user)
+        :return result in form "Bx Cy" where x - number of bulls and y - number of cows
+        """
         bulls = 0
         cows = 0
 
         for i in range(4):
-            if attempt[i] == riddle[i]:
+            if attempt[i] == puzzle[i]:
                 bulls += 1
             else:
-                if attempt[i] in riddle:
+                if attempt[i] in puzzle:
                     cows += 1
 
         return 'B' + str(bulls) + ' C' + str(cows)
 
 
 class UserGame(BullsCows):
+    """
+    class provides an interface for the game where a user tries to figure out the puzzle picked up by a computer
+    game_log keeps the history of requests and responses in the form:
+    game_log = {
+    '8134': 'B0 C1',
+    9834': 'B0 C2',
+    ...
+    }
+    User game started with picking up the puzzle
+    """
     def __init__(self):
         self.game_log = {}
         self.puzzle = BullsCows.pick()
 
     def check(self, attempt):
+        """
+        function handles with user inputs. It handles the next wrong inputs:
+        - wrong number of symbols;
+        - wrong symbols;
+        - same symbols in the request;
+        - the request is already in game_log (the user already input that request earlier in the game session)
+        :return request
+        """
         trial = ""
 
         if len(attempt) != 4:
@@ -94,19 +120,16 @@ class CompGame(BullsCows):
     def generate_full():
         """
         generate function returns the list of all possible arrangements of 4 from 10 numeric symbols
-        :return full: list of all possible arrangements of 4 from 10 numeric symbols
+        :return full: list of all possible arrangements of 4 from 10 numeric symbols with length 5040
         """
         full = []
-        numeric0 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        numeric0 = '0123456789'
         for number0 in numeric0:
-            numeric1 = numeric0.copy()
-            numeric1.remove(number0)
+            numeric1 = numeric0.replace(number0, '')
             for number1 in numeric1:
-                numeric2 = numeric1.copy()
-                numeric2.remove(number1)
+                numeric2 = numeric1.replace(number1, '')
                 for number2 in numeric2:
-                    numeric3 = numeric2.copy()
-                    numeric3.remove(number2)
+                    numeric3 = numeric2.replace(number2, '')
                     for number3 in numeric3:
                         full.append(number0 + number1 + number2 + number3)
         return full
@@ -132,7 +155,7 @@ class CompGame(BullsCows):
 
     def generate_rest(self):
         """
-        generate function returns the list of all possible numeric which correspond to the trialLog dictionary
+        generate function returns the list of all possible numeric which correspond to the game_log dictionary
         :return result: the list of all possible string of 4 numeric symbols
         """
         new = []
@@ -144,7 +167,6 @@ class CompGame(BullsCows):
         self.rest = new
 
     def analyze(self, widget=None):
-    # def analyze(self):
         """
         analyze function returns the dictionary of the form, e.g.:
         {'1234':    {'B0 C1': 14,
