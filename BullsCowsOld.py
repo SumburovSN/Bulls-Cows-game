@@ -98,7 +98,7 @@ class UserGame(BullsCows):
 class CompGame(BullsCows):
     def __init__(self):
         self.game_log = {}
-        # self.isFinished = False
+        self.isFinished = False
         self.full = CompGame.generate_full()
         self.rest = self.full.copy()
 
@@ -158,30 +158,29 @@ class CompGame(BullsCows):
         generate function returns the list of all possible numeric which correspond to the game_log dictionary
         :return result: the list of all possible string of 4 numeric symbols
         """
-        rest_new = []
+        new = []
         key = list(self.game_log.keys())[-1]
         for number in self.rest:
             if self.compare(key, number) == self.game_log[key]:
-                rest_new.append(number)
+                new.append(number)
 
-        self.rest = rest_new
-
+        self.rest = new
 
     def analyze(self, widget=None):
         """
-        analyze function returns the array of the entries each of them is also array, e.g.:
-        [
-        ['1234', 338], <- the entry
+        analyze function returns the dictionary of the form, e.g.:
+        {'1234':    {'B0 C1': 14,
+                    'B1 C1': 3}
+        '5678':     {'B1 C2': 1,
+                    'B2 C0': 30}
         ...
-        ['5678', 234]],
-        ...
-        ]
-        Each numeric of full array is checked against each numeric in rest array, then results are aggregated according their combinations ('B0 C1', 'B0 C2', etc.),
-        and maximum of all possible combinations is chosen to put into entry array.
-        :return analysis: the array of all possible numeric and maximum amount of possible responses for every entry.
+        }
+        for each numeric it contains the dictionary of the possible responses and corresponding them amounts of possible
+        numeric
+        :return analysis: the dictionary of all possible answers and amounts of possible numeric for every entry
         """
 
-        analysis = []
+        analysis = {}
 
         i = 0
         if widget:
@@ -192,63 +191,44 @@ class CompGame(BullsCows):
             if widget:
                 widget['value'] = i
                 widget.master.update()
-
-            # it prints in one row in PyCharm, not in IDLE
             print("\r in progress... {:.0%}".format(i / 5040), end='')
 
-            amounts = []
-            responses = []
-
+            matrix = {}
+            analysis[head] = matrix
             for current in self.rest:
-                result = BullsCows.compare(current, head)
-                try:
-                    index = responses.index(result)
-                except:
-                    index = -1
-                if index >= 0:
-                    amounts[index] += 1
+                result = BullsCows.compare(head, current)
+                if result not in matrix:
+                    matrix[result] = 1
                 else:
-                    responses.append(result)
-                    amounts.append(1)
-            amounts.sort(reverse=True)
-            analysis.append(CompGame.Attempt(head, amounts[0]))
-
+                    matrix[result] += 1
         print(" Ready.")
         return analysis
 
     @staticmethod
     def min_max(analysis):
         """
-        minFromMax function forms the optimal request based on the minimum of all maximums values
-        requires protection against empty rest array
-        :param analysis: the array from the analyze function
-        :return result: the array of all possible string of 4 numeric symbols with minimum of all maximum
+        min_max function forms the optimal request based on the minimum of all maximums values of Attempt class instances
+        :param analysis: the dictionary from the analyze function
+        :return result: the list of all possible string of 4 numeric symbols with minimum of all maximum
         """
-
+        list_max = []
         result = []
-        analysis.sort()
+        for key in analysis.keys():
+            current = CompGame.Attempt(key, 0)
+            for value in analysis[key].values():
+                if value > current.amount:
+                    current.amount = value
+            list_max.append(current)
 
-        minimum = analysis[0].amount
-        i = 0
-        while analysis[i].amount == minimum:
-            result.append(analysis[i].numeric)
-            i += 1
-
+        list_max.sort()
+        minimum = list_max[0].amount
+        for attempt in list_max:
+            if attempt.amount <= minimum:
+                result.append(attempt)
         return result
 
     def suggest(self, widget=None):
-        """
-        suggest function get the next request for User to be checked
-        requires protection against empty rest array
-        The sequence is below:
-        1. If game started, pick up random number;
-        2. Check if rest array is empty => one of responses was wrong, terminate the game;
-        3. if rest array contains 1 number => it's the riddle;
-        4. Make the optimal list and pick up the random number from it.
-        :return trial: the next request of possible string of 4 numeric symbols
-        :param widget: reference to progress bar
-        :return trial: the next request of possible string of 4 numeric symbols
-        """
+
         if len(self.game_log) == 0:
             trial = BullsCows.pick()
         else:
@@ -256,23 +236,23 @@ class CompGame(BullsCows):
 
             if len(self.rest) == 0:
                 trial = "0"
-
+                self.isFinished = True
             else:
                 if len(self.rest) == 1:
                     trial = self.rest[0]
-
+                    self.isFinished = True
                 else:
                     analysis = self.analyze(widget)
                     list_optimal = CompGame.min_max(analysis)
                     priority = []
                     for response in list_optimal:
-                        if response in self.rest:
+                        if response.numeric in self.rest:
                             priority.append(response)
 
                     if priority:
                         list_optimal = priority
 
                     index = int(random.random() * len(list_optimal))
-                    trial = list_optimal[index]
+                    trial = list_optimal[index].numeric
 
         return trial
